@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[derive(Clone, Copy)]
 struct OptionVector {
     solved: usize,       // solved if self != 0
@@ -21,55 +19,55 @@ struct SolutionsStack {
 
 impl Sudoku {
     fn check_sub_area(&self, value: usize, pos: &Position) -> bool {
-        let mut set = HashSet::new();
+        let mut set = [false; 9];
         let row = (pos.row / 3) * 3;
         let col = (pos.col / 3) * 3;
         for i in 0..3 {
             for j in 0..3 {
                 let cell = &self.board[(row + i)][(col + j)];
                 if cell.solved != 0 {
-                    if set.contains(&cell.solved) {
+                    if !set[cell.solved - 1] {
                         return false;
                     } else {
-                        set.insert(cell.solved);
+                        set[cell.solved - 1] = true;
                     }
                 }
             }
         }
         // value is not in sub area
-        !set.contains(&value)
+        !set[value - 1]
     }
 
     fn check_row(&self, value: usize, pos: &Position) -> bool {
-        let mut set = HashSet::new();
+        let mut set = [false; 9];
         for i in 0..9 {
             let cell = &self.board[pos.row][i];
             if cell.solved != 0 {
-                if set.contains(&cell.solved) {
+                if !set[&cell.solved - 1] {
                     return false;
                 } else {
-                    set.insert(cell.solved);
+                    set[&cell.solved - 1] = true;
                 }
             }
         }
         // value is not in row
-        !set.contains(&value)
+        !set[value - 1]
     }
 
     fn check_col(&self, value: usize, pos: &Position) -> bool {
-        let mut set = HashSet::new();
+        let mut set = [false; 9];
         for i in 0..9 {
             let cell = &self.board[i][pos.col];
             if cell.solved != 0 {
-                if set.contains(&cell.solved) {
+                if !set[&cell.solved - 1] {
                     return false;
                 } else {
-                    set.insert(cell.solved);
+                    set[&cell.solved - 1] = true;
                 }
             }
         }
         // value is not in col
-        !set.contains(&value)
+        !set[value - 1]
     }
 
     pub fn is_solved(&self) -> bool {
