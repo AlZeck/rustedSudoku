@@ -4,7 +4,23 @@ struct OptionVector {
     options: [usize; 9], // if solved empty
 }
 
-struct Position {
+impl OptionVector {
+    fn new_solved(solved: usize) -> OptionVector {
+        OptionVector {
+            solved: solved,
+            options: [0; 9],
+        }
+    }
+
+    fn new_unsolved(options: [usize; 9]) -> OptionVector {
+        OptionVector {
+            solved: 0,
+            options: options,
+        }
+    }
+}
+
+pub struct Position {
     row: usize,
     col: usize,
 }
@@ -126,9 +142,9 @@ impl Sudoku {
             for j in 0..9 {
                 if c[i * 9 + j] != '.' {
                     sudoku.board[i][j] =
-                        generate_vector(c[i * 9 + j].to_digit(10).unwrap() as usize);
+                        OptionVector::new_solved(c[i * 9 + j].to_digit(10).unwrap() as usize);
                 } else {
-                    sudoku.board[i][j] = generate_vector(0)
+                    sudoku.board[i][j] = OptionVector::new_unsolved([1, 2, 3, 4, 5, 6, 7, 8, 9]);
                 }
             }
         }
@@ -175,17 +191,5 @@ impl Sudoku {
             }
             println!();
         }
-    }
-}
-
-fn generate_vector(solved: usize) -> OptionVector {
-    let options = if solved == 0 {
-        [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    } else {
-        [0; 9]
-    };
-    OptionVector {
-        solved: solved,
-        options: options,
     }
 }
