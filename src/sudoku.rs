@@ -1,7 +1,16 @@
-#[derive(Clone, Copy)]
+#[derive(Copy)]
 struct OptionVector {
     solved: usize,       // solved if self != 0
     options: [usize; 9], // if solved empty
+}
+
+impl Clone for OptionVector {
+    fn clone(&self) -> Self {
+        OptionVector {
+            solved: self.solved,
+            options: self.options.clone(),
+        }
+    }
 }
 
 impl OptionVector {
