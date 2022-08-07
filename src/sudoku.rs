@@ -1,3 +1,5 @@
+use std::process::exit;
+
 #[derive(Copy)]
 struct OptionVector {
     solved: usize,       // solved if self != 0
@@ -27,6 +29,26 @@ impl OptionVector {
             options: options,
         }
     }
+
+    fn remove_option(&mut self, index: usize) {
+        if self.solved != 0 {
+            return;
+        }
+
+        let mut i = index;
+
+        while i < 8 && self.options[i + 1] != 0 {
+            self.options[i] = self.options[i + 1];
+            i += 1;
+        }
+        self.options[i] = 0;
+    }
+
+    fn solve(&mut self) {
+        if self.solved == 0 && self.options[1] == 0 {
+            self.solved = self.options[0];
+        }
+    }
 }
 
 pub struct Position {
@@ -44,6 +66,9 @@ struct SolutionsStack {
 
 impl Sudoku {
     fn check_sub_area(&self, value: usize, pos: &Position) -> bool {
+        if value == 0 {
+            return true;
+        }
         let mut set = [false; 9];
         let row = (pos.row / 3) * 3;
         let col = (pos.col / 3) * 3;
@@ -51,7 +76,7 @@ impl Sudoku {
             for j in 0..3 {
                 let cell = &self.board[(row + i)][(col + j)];
                 if cell.solved != 0 {
-                    if !set[cell.solved - 1] {
+                    if set[cell.solved - 1] {
                         return false;
                     } else {
                         set[cell.solved - 1] = true;
@@ -64,14 +89,17 @@ impl Sudoku {
     }
 
     fn check_row(&self, value: usize, pos: &Position) -> bool {
+        if value == 0 {
+            return true;
+        }
         let mut set = [false; 9];
         for i in 0..9 {
             let cell = &self.board[pos.row][i];
             if cell.solved != 0 {
-                if !set[&cell.solved - 1] {
+                if set[cell.solved - 1] {
                     return false;
                 } else {
-                    set[&cell.solved - 1] = true;
+                    set[cell.solved - 1] = true;
                 }
             }
         }
@@ -80,14 +108,17 @@ impl Sudoku {
     }
 
     fn check_col(&self, value: usize, pos: &Position) -> bool {
+        if value == 0 {
+            return true;
+        }
         let mut set = [false; 9];
         for i in 0..9 {
             let cell = &self.board[i][pos.col];
             if cell.solved != 0 {
-                if !set[&cell.solved - 1] {
+                if set[cell.solved - 1] {
                     return false;
                 } else {
-                    set[&cell.solved - 1] = true;
+                    set[cell.solved - 1] = true;
                 }
             }
         }
@@ -105,8 +136,8 @@ impl Sudoku {
         }
 
         for i in 0..9 {
-            if self.check_row(0, &Position { row: i, col: 0 })
-                || self.check_col(0, &Position { row: 0, col: i })
+            if !self.check_row(0, &Position { row: i, col: 0 })
+                || !self.check_col(0, &Position { row: 0, col: i })
             {
                 return false;
             }
@@ -114,7 +145,7 @@ impl Sudoku {
 
         for i in 0..3 {
             for j in 0..3 {
-                if self.check_sub_area(
+                if !self.check_sub_area(
                     0,
                     &Position {
                         row: i * 3,
@@ -129,7 +160,7 @@ impl Sudoku {
         true
     }
 
-    pub fn validate_option(&self, value: usize, pos: Position) -> bool {
+    fn validate_option(&self, value: usize, pos: Position) -> bool {
         if self.board[pos.row][pos.col].solved != 0 {
             return false;
         }
@@ -199,6 +230,28 @@ impl Sudoku {
                 }
             }
             println!();
+        }
+    }
+
+    pub fn solve(&mut self) {
+        for _ in 0..82 {
+            for i in 0..9 {
+                for j in 0..9 {
+                    let mut cell = self.board[i][j];
+                    if cell.solved == 0 {
+                        let mut k = 0;
+                        while k < 9 && cell.options[k] != 0 {
+                            if self.validate_option(cell.options[k], Position { row: i, col: j }) {
+                                k += 1;
+                            } else {
+                                cell.remove_option(k);
+                            }
+                        }
+                        cell.solve();
+                        self.board[i][j] = cell;
+                    }
+                }
+            }
         }
     }
 }
