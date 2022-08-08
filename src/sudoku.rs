@@ -1,9 +1,23 @@
+use std::collections::{HashSet, LinkedList};
+use std::hash::Hash;
 use std::process::exit;
 
-#[derive(Copy)]
+#[derive(Copy, Eq)]
 struct OptionVector {
     solved: usize,       // solved if self != 0
     options: [usize; 9], // if solved empty
+}
+
+impl PartialEq for OptionVector {
+    fn eq(&self, other: &Self) -> bool {
+        self.solved == other.solved
+    }
+}
+
+impl Hash for OptionVector {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.solved.hash(state);
+    }
 }
 
 impl Clone for OptionVector {
@@ -44,10 +58,28 @@ impl OptionVector {
         self.options[i] = 0;
     }
 
-    fn solve(&mut self) {
+    fn solve(&mut self) -> Result<(), &str> {
         if self.solved == 0 && self.options[1] == 0 {
             self.solved = self.options[0];
+            self.options[0] = 0;
+
+            if self.solved == 0 {
+                return Err("Unsolvable cell");
+            }
         }
+        Ok(())
+    }
+
+    fn is_solved(&self) -> bool {
+        self.solved != 0
+    }
+
+    fn set_option(&mut self, index: usize) {
+        if self.solved != 0 {
+            return;
+        }
+        self.solved = self.options[index];
+        self.options = [0; 9];
     }
 }
 
@@ -56,12 +88,22 @@ pub struct Position {
     col: usize,
 }
 
+#[derive(Copy, Clone, Eq, Hash)]
 pub struct Sudoku {
     board: [[OptionVector; 9]; 9],
 }
 
-struct SolutionsStack {
-    solutions: Vec<Sudoku>,
+impl PartialEq for Sudoku {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..9 {
+            for j in 0..9 {
+                if !self.board[i][j].eq(&other.board[i][j]) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
 }
 
 impl Sudoku {
@@ -233,25 +275,88 @@ impl Sudoku {
         }
     }
 
-    pub fn solve(&mut self) {
-        for _ in 0..82 {
-            for i in 0..9 {
-                for j in 0..9 {
-                    let mut cell = self.board[i][j];
-                    if cell.solved == 0 {
-                        let mut k = 0;
-                        while k < 9 && cell.options[k] != 0 {
-                            if self.validate_option(cell.options[k], Position { row: i, col: j }) {
-                                k += 1;
-                            } else {
-                                cell.remove_option(k);
-                            }
+    pub fn solve(&mut self) -> Result<(), &str> {
+        for i in 0..9 {
+            for j in 0..9 {
+                let mut cell = self.board[i][j];
+                if cell.solved == 0 {
+                    let mut k = 0;
+                    while k < 9 && cell.options[k] != 0 {
+                        if self.validate_option(cell.options[k], Position { row: i, col: j }) {
+                            k += 1;
+                        } else {
+                            cell.remove_option(k);
                         }
-                        cell.solve();
-                        self.board[i][j] = cell;
+                    }
+                    if cell.solve().is_err() {
+                        return Err("Could not solve");
+                    }
+                    self.board[i][j] = cell;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut string = String::new();
+        for i in 0..9 {
+            for j in 0..9 {
+                let cell = &self.board[i][j];
+                if cell.solved != 0 {
+                    string.push_str(cell.solved.to_string().as_str());
+                } else {
+                    string.push('.');
+                }
+            }
+        }
+        string
+    }
+}
+
+pub fn master_solve(sudoku: &Sudoku) -> HashSet<Sudoku> {
+    let mut options_stack: LinkedList<Sudoku> = LinkedList::new();
+    let mut solved: HashSet<Sudoku> = HashSet::new();
+    options_stack.push_back(sudoku.clone());
+
+    while options_stack.len() > 0 {
+        let mut sudoku = options_stack.pop_front().unwrap();
+        if sudoku.solve().is_ok() {
+            if sudoku.is_solved() {
+                if !solved.contains(&sudoku) {
+                    solved.insert(sudoku);
+                    sudoku.print();
+                    println!();
+                }
+            } else {
+                let mut i = 0;
+                let mut j = 0;
+                while i < 9 {
+                    if !(sudoku.board[i][j].is_solved()) {
+                        let mut k = 0;
+                        while k < 9 && sudoku.board[i][j].options[k] != 0 {
+                            let mut new_sudoku = sudoku.clone();
+                            new_sudoku.board[i][j].set_option(k);
+
+                            if !(options_stack.contains(&new_sudoku)) {
+                                options_stack.push_back(new_sudoku);
+                            } else {
+                                println!("already in stack");
+                            }
+
+                            k += 1;
+                        }
+                        break;
+                    } else {
+                        j += 1;
+                        if j == 9 {
+                            i += 1;
+                            j = 0;
+                        }
                     }
                 }
             }
         }
     }
+    solved
 }
